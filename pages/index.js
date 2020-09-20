@@ -1,7 +1,11 @@
-import Head from 'next/head'
+import Head from 'next/head';
+import Waveform from '../components/Waveform';
 
 export default function Home() {
-  const streamCount = 3;
+  const webSocketConfig = {
+    url: 'ws://localhost:8080'
+  };
+  const streamCount = 1;
   const colors = [
     [
       [255,255,255]
@@ -47,11 +51,7 @@ export default function Home() {
 
   return (
     <div id="useless">
-      {
-        bits.map(bits => <ol className="waveform">
-          { bits.map((bit, index) => <li key={index+'_'+bit+'_'+Math.random() * 3000} style={{height: bit+'px', marginTop: (100-bit)/2}}></li>) }
-        </ol>)
-      }
+      { bits.map((bits, index) => <Waveform bits={bits} color={colors[streamCount-1][index]} />) }
 
       <style jsx global>{`
         html,
