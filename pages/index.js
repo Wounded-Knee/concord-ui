@@ -1,57 +1,72 @@
 import Head from 'next/head';
 import Waveform from '../components/Waveform';
+import Websocket from 'react-websocket';
+const websocketUrl = "ws://localhost:8080/";
+const streamCount = 3;
+const colors = [
+  [
+    [255,255,255]
+  ],
+  [
+    [255,255,0],
+    [0,0,255]
+  ],
+  [
+    [255,0,0],
+    [0,255,0],
+    [0,0,255]
+  ],
+  [
+    [255,0,0],
+    [0,255,0],
+    [0,0,255],
+    [0,127,127]
+  ],
+  [
+    [255,0,0],
+    [0,255,0],
+    [0,0,255],
+    [0,127,127]
+    [127,127,0]
+  ]
+];
+const callbacks = [];
+const registerCallback = callback => {
+  callbacks.push(callback);
+  return callbacks.length-1;
+}
+const users = [];
+const getUserById = id => users.find(user => user.id === id);
+const onMessage = jsonString => {
+  const data = JSON.parse(jsonString);
+  const { user } = data;
+  const foundUser = getUserById(user.id);
+  if (typeof(foundUser) === 'undefined') {
+    users.push(user);
+  }
+  const userIndex = users.indexOf(foundUser);
+  if (callbacks[userIndex]) callbacks[userIndex](data);
+}
 
 export default function Home() {
-  const webSocketConfig = {
-    url: 'ws://localhost:8080'
-  };
-  const streamCount = 1;
-  const colors = [
-    [
-      [255,255,255]
-    ],
-    [
-      [255,255,0],
-      [0,0,255]
-    ],
-    [
-      [255,0,0],
-      [0,255,0],
-      [0,0,255]
-    ],
-    [
-      [255,0,0],
-      [0,255,0],
-      [0,0,255],
-      [0,127,127]
-    ],
-    [
-      [255,0,0],
-      [0,255,0],
-      [0,0,255],
-      [0,127,127]
-      [127,127,0]
-    ]
-  ];
-  const makeBits = (count, min, max) => {
-    const bits = [];
-    var rolling = (max-min)/2;
-    var eccentrism = 0;
-    for (var x=0; x<count; x++) {
-      eccentrism = parseInt((Math.random() * 30)) * (Math.random() < 0.5 ? -1 : 1);
-      rolling = Math.max(min, Math.min(max, rolling + eccentrism));
-      bits.push(rolling);
-    }
-    return bits;
-  }
-  const bits = [];
-  for (var x=0; x<streamCount; x++) {
-    bits.push(makeBits(500, 0, 100));
-  }
-
   return (
     <div id="useless">
-      { bits.map((bits, index) => <Waveform bits={bits} color={colors[streamCount-1][index]} />) }
+      {[...Array(streamCount)].map((x, i) =>
+        <Waveform
+          users={ users }
+          color={ colors[streamCount-1][i] }
+          registerCallback={ registerCallback }
+        />
+      )}
+
+      {
+        typeof(WebSocket) !== 'undefined' ? (
+          <Websocket
+            url={ websocketUrl }
+            onMessage={ onMessage }
+          />
+        ) : 'No websocket'
+      }
 
       <style jsx global>{`
         html,
@@ -67,17 +82,6 @@ export default function Home() {
           box-sizing: border-box;
         }
 
-        ${ colors[streamCount-1].map((color, index) => {
-          return `
-            .waveform {} /* Why TF is this needed? */
-
-            .waveform:nth-child(${index+1}) li {
-              background: rgb(${color[0]},${color[1]},${color[2]});
-              background: linear-gradient(0deg, rgba(${color[0]},${color[1]},${color[2]},0) 0%, rgba(${color[0]},${color[1]},${color[2]},1) 50%, rgba(${color[0]},${color[1]},${color[2]},0) 100%); 
-            }
-          `;
-        }) }
-
         .waveform {
           margin: 0;
           padding: 0;
@@ -89,11 +93,6 @@ export default function Home() {
           list-style-type: none;
           mix-blend-mode: difference;
           background: black;
-        }
-        .waveform li {
-          float: left;
-          width: 1px;
-          height: 100px;
         }
       `}</style>
     </div>
