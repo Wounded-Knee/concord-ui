@@ -1,6 +1,4 @@
-import React from 'react';
 import Canvas from './Canvas';
-const qty = 500;
 
 class Waveform extends Canvas {
 	constructor(props) {
@@ -14,8 +12,8 @@ class Waveform extends Canvas {
 	getForwardProps() {
 		return {
 			className: 'waveform',
-			width: 500,
-			height: 100
+			width: this.props.width,
+			height: this.props.height
 		};
 	}
 
@@ -39,14 +37,14 @@ class Waveform extends Canvas {
 		ctx.globalCompositeOperation = "source-over";
 
 		// Draw data line
-		const gradient = ctx.createLinearGradient(0, margin, 0, 100-margin);
+		const gradient = ctx.createLinearGradient(0, margin, 0, this.props.height-margin);
 		gradient.addColorStop(0, `rgba(${r},${g},${b},0)`);
 		gradient.addColorStop(0.5, `rgba(${r},${g},${b},1)`);
 		gradient.addColorStop(1.0, `rgba(${r},${g},${b},0)`);
 		ctx.strokeStyle = gradient;
 		ctx.lineWidth = 1;
 		ctx.moveTo(ctx.canvas.width, margin);
-		ctx.lineTo(ctx.canvas.width, 100-margin);
+		ctx.lineTo(ctx.canvas.width, this.props.height-margin);
 		ctx.stroke();
 	}
 }

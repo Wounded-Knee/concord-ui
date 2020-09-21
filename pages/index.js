@@ -3,7 +3,7 @@ import Head from 'next/head';
 import MultiWaveform from '../components/MultiWaveform';
 import Websocket from 'react-websocket';
 import config from '../config';
-const { websocketUrl } = config;
+const { websocketUrl, height, width } = config;
 
 export default class Home extends React.Component {
   constructor(props) {
@@ -11,19 +11,6 @@ export default class Home extends React.Component {
     this.state = {
       streams: []
     };
-  }
-
-  componentDidMount() {
-    setInterval(() => {
-      const { streams } = this.state;
-      for (var x=0; x<streams.length; x++) {
-        if (typeof(streams[x].tick) === 'function') {
-          streams[x].tick();
-        } else {
-          console.warn(`${streams[x].user.username} has no tick callback`);
-        }
-      }
-    }, 100);
   }
 
   getStreamIndexByUser(user) {
@@ -79,10 +66,12 @@ export default class Home extends React.Component {
   render() {
     const { streams } = this.state;
     return (
-      <div id="useless">
+      <>
         {
           streams.length ? <MultiWaveform
             streams={ streams }
+            height={ height }
+            width={ width }
             callbackGenerator={ user => this.registerCallbacks.bind(this, user) }
           /> : 'Waiting for streams...'
         }
@@ -138,7 +127,7 @@ export default class Home extends React.Component {
             background: black;
           }
         `}</style>
-      </div>
+      </>
     );
   }
 }
