@@ -1,77 +1,68 @@
 import React from 'react';
 import Head from 'next/head';
-import MultiWaveform from '../components/MultiWaveform';
+import Scroller from '../components/Scroller';
+import WaveformManager from '../components/WaveformManager';
 import Websocket from 'react-websocket';
 import config from '../config';
 const { websocketUrl, height, width, visibleWidth } = config;
-const hrtimeToBigint = hrtime => {
-    if (!hrtime) throw new Error('hrtime: ' + hrtime);
-    return hrtime[0] * 1000000 + hrtime[1] / 1000;
-};
-const timeToPx = ms => ms / 100000;
+const fakeUsers = [1,2,3];
+var chunkCount = 0;
+const timers = [];
 
-export default class Home extends React.Component {
+export default class Dev extends React.Component {
   constructor(props) {
     super(props);
+
     this.state = {
-      streams: []
+      secs: 0,
+      streams: {}
     };
   }
 
-  getStreamIndexByUser(user) {
-    return this.state.streams.reduce(
-      (acc, val, idx) =>
-        val.user.id === user.id
-          ? idx
-          : acc
-      , false
-    );
+  componentDidMount() {
+    timers.push(setInterval(this.tick.bind(this), 1000));
   }
 
-  registerCallbacks(user, callbacks) {
-    const streamIndex = this.getStreamIndexByUser(user);
-    const streams = [ ...this.state.streams ];
-    streams[streamIndex].callbacks = callbacks;
-    this.setState({
-      streams: streams
-    });
-    return true;
+  componentWillUnmount() {
+    timers.map(timer => clearInterval(timer));
   }
 
-  processChunk(data) {
-    const { streams } = this.state;
-    var satisfied = false;
+  receive(newChunk) {
+    const user = newChunk.user.id;
+    const userStream = this.state.streams[user] || [];
+    chunkCount++;
 
-    for (var x=0; x<streams.length; x++) {
-      if (streams[x].user.id === data.user.id) {
-        streams[x].chunks.push(data);
-        streams[x].callbacks.receive(data);
-        satisfied = true;
-      }
-    }
-
-    if (!satisfied) {
-      streams.push({
-        user: data.user,
-        callbacks: {
-          tick: () => {},
-          receive: () => {}
-        },
-        chunks: [ data ]
-      });
-    }
-
-    this.setState({
-      ...this.state,
-      streams: streams
-    });
+    this.setState((state) => ({
+      streams: {
+        ...state.streams,
+        [user]: [
+          ...state.streams[user] || [],
+          newChunk
+        ]
+      },
+      chunkCount: chunkCount
+    }));
   }
 
-  processFrames(data) {
-    this.setState({
-      ...this.state,
-      frames: data
-    });
+  tick() {
+    this.setState((state) => ({
+      secs: state.secs + 1
+    }));
+  }
+
+  makeChunk() {
+    return {
+      user: fakeUsers[Math.floor(Math.random()*fakeUsers.length)],
+      time: [
+        this.state.secs,
+        Math.floor((Math.random() * 900541512) + 1)
+      ],
+      delightfulness: Math.floor((Math.random() * 100) + 1)
+    };
+  }
+
+  getStreams() {
+    return Object.keys(this.state.streams).map(user => this.state.streams[user]);
   }
 
   onMessage(jsonString) {
@@ -85,53 +76,32 @@ export default class Home extends React.Component {
         this.processFrames(data);
       }
     } else if (data.delightfulness) {
-       this.processChunk(data);
+       this.receive(data);
     }
   }
 
-  render() {
-    const { streams, frames } = this.state;
-    const callbackGenerator = user => this.registerCallbacks.bind(this, user);
+  processFrames(data) {
+    this.setState({
+      ...this.state,
+      frames: data
+    });
+  }
 
+  render() {
     return (
       <>
-        {
-          streams.length ? <MultiWaveform
-            streams={ streams }
+        <Scroller height={ height } width={ visibleWidth } secs={ this.state.secs }>
+          <WaveformManager
+            streams={ this.getStreams() }
             height={ height }
             width={ width }
-            callbackGenerator={ callbackGenerator }
-          /> : 'Waiting for streams...'
-        }
+            secs={ this.state.secs }
+          />
+        </Scroller>
 
-        <dl>
-          {
-            this.state.streams.map(stream => <>
-              <dt>{ stream.user.username }</dt>
-              <dd>
-                { stream.chunks.length } chunks
-                <ul className="frames">
-                  {
-                    frames && false
-                      ? frames.filter(
-                          frame =>
-                            frame.user.id === stream.user.id &&
-                            frame.timeEnd
-                        ).map(
-                          frame => (
-                            <li style={{
-                              left: timeToPx(hrtimeToBigint(frame.timeStart)),
-                              width: timeToPx(hrtimeToBigint(frame.timeEnd) - hrtimeToBigint(frame.timeStart))
-                            }}></li>
-                          )
-                        )
-                      : ''
-                  }
-                </ul>
-              </dd>
-            </>)
-          }
-        </dl>
+        <p>Secs: { this.state.secs }</p>
+        <p>Streams: { this.getStreams().length }</p>
+        <p>Chunks: { chunkCount }</p>
 
         {
           typeof(WebSocket) !== 'undefined' ? (
@@ -141,54 +111,6 @@ export default class Home extends React.Component {
             />
           ) : 'No websocket'
         }
-
-        <style jsx global>{`
-          html,
-          body {
-            padding: 0;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
-              Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
-              sans-serif;
-          }
-
-          * {
-            box-sizing: border-box;
-          }
-
-          div.canvas {
-            overflow-x: auto;
-            width: ${ visibleWidth }px;
-            position: relative;
-          }
-
-          ul.frames {
-            list-style-type: none;
-            position: relative;
-          }
-          ul.frames li {
-            height: 2px;
-            background: #f00;
-            display: block;
-            position: absolute;
-            top: 0;
-          }
-
-          dl {
-            margin-top: -150px;
-          }
-
-          .waveform {
-            position: absolute;
-            top: 0;
-            margin: 0;
-            padding: 0;
-            display: block;
-            list-style-type: none;
-            mix-blend-mode: difference;
-            background: black;
-          }
-        `}</style>
       </>
     );
   }
