@@ -4,7 +4,8 @@ import Scroller from '../components/Scroller';
 import WaveformManager from '../components/WaveformManager';
 import Websocket from 'react-websocket';
 import config from '../config';
-const { websocketUrl, height, width, visibleWidth } = config;
+import { getHexColor } from '../util';
+const { websocketUrl, height, width, visibleWidth, colors } = config;
 const fakeUsers = [1,2,3];
 var chunkCount = 0;
 const timers = [];
@@ -15,7 +16,11 @@ export default class Dev extends React.Component {
 
     this.state = {
       secs: 0,
-      streams: {}
+      streams: {},
+      users: {},
+      frames: [],
+      errors: [],
+      messages: []
     };
   }
 
@@ -40,6 +45,10 @@ export default class Dev extends React.Component {
           newChunk
         ]
       },
+      users: {
+        ...state.users,
+        [user]: newChunk.user
+      },
       chunkCount: chunkCount
     }));
   }
@@ -48,17 +57,6 @@ export default class Dev extends React.Component {
     this.setState((state) => ({
       secs: state.secs + 1
     }));
-  }
-
-  makeChunk() {
-    return {
-      user: fakeUsers[Math.floor(Math.random()*fakeUsers.length)],
-      time: [
-        this.state.secs,
-        Math.floor((Math.random() * 900541512) + 1)
-      ],
-      delightfulness: Math.floor((Math.random() * 100) + 1)
-    };
   }
 
   getStreams() {
@@ -77,31 +75,68 @@ export default class Dev extends React.Component {
       }
     } else if (data.delightfulness) {
        this.receive(data);
+    } else if (data.error) {
+      this.setState(state => ({
+        ...state,
+        errors: [
+          ...state.errors,
+          data.error
+        ]
+      }));
+      console.error('Error: ', data.error);
+    } else if (data.message) {
+      this.setState(state => ({
+        ...state,
+        messages: [
+          ...state.messages,
+          data.message
+        ]
+      }));
+      console.log('Message: ', data.message);
     }
   }
 
   processFrames(data) {
-    this.setState({
-      ...this.state,
+    this.setState(state => ({
+      ...state,
       frames: data
-    });
+    }));
   }
 
   render() {
+    const {
+      errors,
+      messages,
+      frames,
+      secs,
+      users
+    } = this.state;
+    const streams = this.getStreams();
+
     return (
       <>
-        <Scroller height={ height } width={ visibleWidth } secs={ this.state.secs }>
+        <Scroller height={ height } width={ visibleWidth } secs={ secs }>
           <WaveformManager
-            streams={ this.getStreams() }
+            streams={ streams }
             height={ height }
             width={ width }
-            secs={ this.state.secs }
+            secs={ secs }
           />
         </Scroller>
 
-        <p>Secs: { this.state.secs }</p>
-        <p>Streams: { this.getStreams().length }</p>
+        { streams.map((stream, i) => {
+            const userId = Object.keys(this.state.streams)[i];
+            return (<span style={{
+              background: getHexColor(colors[streams.length-1][i])
+            }}>{ users[userId].username }</span>);
+        }) }
+
+        <p>Secs: { secs }</p>
+        <p>Streams: { streams.length }</p>
         <p>Chunks: { chunkCount }</p>
+        <p>Errors: { errors.length }</p>
+        <p>Messages: { messages.length }</p>
+        <p>Frames: { frames.length } total, { frames.filter(frame => frame.data.disruptive).length } disruptive</p>
 
         {
           typeof(WebSocket) !== 'undefined' ? (

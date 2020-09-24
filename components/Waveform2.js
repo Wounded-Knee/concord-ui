@@ -9,6 +9,7 @@ var lastIndex = 0;
 var firstCol = 0;
 const paintx = false;
 const testStripe = false;
+const showGradient = false;
 
 export default class Waveform extends React.Component {
 	constructor(props) {
@@ -33,13 +34,14 @@ export default class Waveform extends React.Component {
 	}
 
 	redraw() {
-		console.log('redraw');
 		if (this.props.stream) this.props.stream.map(chunk => this.drawChunk(chunk));
 	}
 
 	drawFurther() {
 		lastIndex = this.props.stream.length-1;
-		if (this.props.stream) this.drawChunks(this.props.stream.slice(lastIndex));
+		const slice = this.props.stream.slice(lastIndex);
+		if (this.props.stream) this.drawChunks(slice);
+		//console.log(`drawFurther ${lastIndex} ${slice.length}`);
 	}
 
 	drawChunks(chunks) {
@@ -52,14 +54,18 @@ export default class Waveform extends React.Component {
 		const { height, width } = ctx.canvas;
 		const col = nsToPx(hrtimeToBigint(chunk.chunkTime)) - firstCol;
 		if (firstCol === 0) firstCol = col;
-		const sample = chunk ? (chunk.delightfulness - 53) * 5 : 2;
+		const sample = chunk ? (chunk.delightfulness - 53) * 5 : 10;
 		const margin = parseInt((height - sample) / 2);
 		const [ r, g, b ] = this.props.color;
-		const gradient = ctx.createLinearGradient(0, margin, 0, height-margin);
-		gradient.addColorStop(0, `rgba(${r},${g},${b},0)`);
-		gradient.addColorStop(0.5, `rgba(${r},${g},${b},1)`);
-		gradient.addColorStop(1.0, `rgba(${r},${g},${b},0)`);
-		ctx.strokeStyle = gradient;
+		if (showGradient) {
+			const gradient = ctx.createLinearGradient(0, margin, 0, height-margin);
+			gradient.addColorStop(0, `rgba(${r},${g},${b},0)`);
+			gradient.addColorStop(0.5, `rgba(${r},${g},${b},1)`);
+			gradient.addColorStop(1.0, `rgba(${r},${g},${b},0)`);
+			ctx.strokeStyle = gradient;
+		} else {
+			ctx.strokeStyle = this.color;
+		}
 		ctx.moveTo(col, margin);
 		ctx.lineTo(col, height-margin);
 		ctx.stroke();
@@ -75,17 +81,17 @@ export default class Waveform extends React.Component {
 	}
 
 	onClick({clientX}) {
-		console.log('Click @', pxToNs(clientX));
 		const { ctx } = this;
 		const { height, width } = ctx.canvas;
+		console.log('Click @', pxToNs(clientX));
 		ctx.strokeStyle = '#f00';
 		ctx.moveTo(clientX, 0);
 		ctx.lineTo(clientX, height);
 		ctx.stroke();
-
 	}
 
 	render() {
+		const { width, height } = this.props;
 		return (
 			<>
 				<canvas
@@ -104,6 +110,8 @@ export default class Waveform extends React.Component {
 		            top: 0;
 		            mix-blend-mode: difference;
 		            background: black;
+		            width: ${ width / window.devicePixelRatio };
+		            height: ${ height / window.devicePixelRatio };
 		          }
 		        `}</style>
 			</>
