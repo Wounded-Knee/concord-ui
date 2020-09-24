@@ -54,7 +54,7 @@ export default class Waveform extends React.Component {
 		const { height, width } = ctx.canvas;
 		const col = nsToPx(hrtimeToBigint(chunk.chunkTime)) - firstCol;
 		if (firstCol === 0) firstCol = col;
-		const sample = chunk ? (chunk.delightfulness - 53) * 5 : 10;
+		const sample = chunk ? (chunk.delightfulness - 50) * 5 : 10;
 		const margin = parseInt((height - sample) / 2);
 		const [ r, g, b ] = this.props.color;
 		if (showGradient) {
