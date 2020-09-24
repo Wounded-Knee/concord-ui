@@ -3,7 +3,12 @@ import Head from 'next/head';
 import MultiWaveform from '../components/MultiWaveform';
 import Websocket from 'react-websocket';
 import config from '../config';
-const { websocketUrl, height, width } = config;
+const { websocketUrl, height, width, visibleWidth } = config;
+const hrtimeToBigint = hrtime => {
+    if (!hrtime) throw new Error('hrtime: ' + hrtime);
+    return hrtime[0] * 1000000 + hrtime[1] / 1000;
+};
+const timeToPx = ms => ms / 100000;
 
 export default class Home extends React.Component {
   constructor(props) {
@@ -33,8 +38,7 @@ export default class Home extends React.Component {
     return true;
   }
 
-  onMessage(jsonString) {
-    const data = JSON.parse(jsonString);
+  processChunk(data) {
     const { streams } = this.state;
     var satisfied = false;
 
@@ -63,8 +67,32 @@ export default class Home extends React.Component {
     });
   }
 
+  processFrames(data) {
+    this.setState({
+      ...this.state,
+      frames: data
+    });
+  }
+
+  onMessage(jsonString) {
+    const data = JSON.parse(jsonString);
+
+    // We receive multiple types of packets here,
+    // so, identify & dispatch them here.
+    if (data.length > 0) {
+      const sample = data[0];
+      if (sample.timeStart) {
+        this.processFrames(data);
+      }
+    } else if (data.delightfulness) {
+       this.processChunk(data);
+    }
+  }
+
   render() {
-    const { streams } = this.state;
+    const { streams, frames } = this.state;
+    const callbackGenerator = user => this.registerCallbacks.bind(this, user);
+
     return (
       <>
         {
@@ -72,7 +100,7 @@ export default class Home extends React.Component {
             streams={ streams }
             height={ height }
             width={ width }
-            callbackGenerator={ user => this.registerCallbacks.bind(this, user) }
+            callbackGenerator={ callbackGenerator }
           /> : 'Waiting for streams...'
         }
 
@@ -82,6 +110,24 @@ export default class Home extends React.Component {
               <dt>{ stream.user.username }</dt>
               <dd>
                 { stream.chunks.length } chunks
+                <ul className="frames">
+                  {
+                    frames && false
+                      ? frames.filter(
+                          frame =>
+                            frame.user.id === stream.user.id &&
+                            frame.timeEnd
+                        ).map(
+                          frame => (
+                            <li style={{
+                              left: timeToPx(hrtimeToBigint(frame.timeStart)),
+                              width: timeToPx(hrtimeToBigint(frame.timeEnd) - hrtimeToBigint(frame.timeStart))
+                            }}></li>
+                          )
+                        )
+                      : ''
+                  }
+                </ul>
               </dd>
             </>)
           }
@@ -110,18 +156,34 @@ export default class Home extends React.Component {
             box-sizing: border-box;
           }
 
+          div.canvas {
+            overflow-x: auto;
+            width: ${ visibleWidth }px;
+            position: relative;
+          }
+
+          ul.frames {
+            list-style-type: none;
+            position: relative;
+          }
+          ul.frames li {
+            height: 2px;
+            background: #f00;
+            display: block;
+            position: absolute;
+            top: 0;
+          }
+
           dl {
-            margin-top: 150px;
+            margin-top: -150px;
           }
 
           .waveform {
-            margin: 0;
-            padding: 0;
             position: absolute;
             top: 0;
+            margin: 0;
+            padding: 0;
             display: block;
-            height: 100px;
-            width: 500px;
             list-style-type: none;
             mix-blend-mode: difference;
             background: black;

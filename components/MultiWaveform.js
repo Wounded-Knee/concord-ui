@@ -29,23 +29,24 @@ export default class MultiWaveform extends React.Component {
       width,
       callbackGenerator
     } = this.props;
+    const colorSet = colors[streams.length - 1];
 
     return (
-      <>
+      <div className="canvas">
         { streams.map(({ user }, i) =>
           <Waveform
             height={ height }
             width={ width }
             user={ user }
             registerCallbacks={ callbackGenerator(user) }
-            color={ colors[streams.length - 1][i] }
+            color={ colorSet[i] }
           />
         ) }
         <Overlay
           height={ height }
           width={ width }
         />
-      </>
+      </div>
     );
   }
 }
