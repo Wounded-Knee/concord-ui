@@ -9,7 +9,7 @@ var lastIndex = 0;
 var firstCol = 0;
 const paintx = false;
 const testStripe = false;
-const showGradient = false;
+const showGradient = true;
 
 export default class Waveform extends React.Component {
 	constructor(props) {
@@ -66,10 +66,12 @@ export default class Waveform extends React.Component {
 		} else {
 			ctx.strokeStyle = this.color;
 		}
+		ctx.beginPath();
 		ctx.moveTo(col, margin);
 		ctx.lineTo(col, height-margin);
 		ctx.stroke();
 		if (testStripe) {
+			ctx.beginPath();
 			ctx.moveTo(5, 0);
 			ctx.lineTo(5, height);
 			ctx.stroke();
@@ -85,6 +87,7 @@ export default class Waveform extends React.Component {
 		const { height, width } = ctx.canvas;
 		console.log('Click @', pxToNs(clientX));
 		ctx.strokeStyle = '#f00';
+		ctx.beginPath();
 		ctx.moveTo(clientX, 0);
 		ctx.lineTo(clientX, height);
 		ctx.stroke();
@@ -123,9 +126,11 @@ export default class Waveform extends React.Component {
 		const { ctx } = this;
 		ctx.strokeStyle = '#000';
 		ctx.lineWidth = 1;
+		ctx.beginPath();
 		ctx.moveTo(0, 0);
 		ctx.lineTo(ctx.canvas.width, ctx.canvas.height);
 		ctx.stroke();
+		ctx.beginPath();
 		ctx.moveTo(0, ctx.canvas.height);
 		ctx.lineTo(ctx.canvas.width, 0);
 		ctx.stroke();
