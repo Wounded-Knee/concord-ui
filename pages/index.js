@@ -4,7 +4,7 @@ import Scroller from '../components/Scroller';
 import WaveformManager from '../components/WaveformManager';
 import Websocket from 'react-websocket';
 import config from '../config';
-import { getHexColor, hrtimeToBigint, pxToNs } from '../util';
+import { getHexColor, hrtimeToBigint, pxToNs, nsToSec } from '../util';
 const { websocketUrl, height, width, visibleWidth, colors } = config;
 const fakeUsers = [1,2,3];
 var chunkCount = 0;
@@ -97,6 +97,11 @@ export default class Dev extends React.Component {
         ]
       }));
       console.log('Message: ', data.message);
+    } else if (data.profile) {
+      this.setState(state => ({
+        ...state,
+        profile: data.profile
+      }));
     }
   }
 
@@ -113,7 +118,8 @@ export default class Dev extends React.Component {
       messages,
       frames,
       secs,
-      users
+      users,
+      profile
     } = this.state;
     const streams = this.getStreams();
     const sync = hrtimeToBigint(latestTime) - (
@@ -140,6 +146,7 @@ export default class Dev extends React.Component {
 
         <p>Secs: { secs }</p>
         <p>Sync: { sync }</p>
+        <p>Avg Svr Proctime: { profile ? nsToSec(profile.avg) : '?' }</p>
         <p>Streams: { streams.length }</p>
         <p>Chunks: { chunkCount }</p>
         <p>Errors: { errors.length }</p>

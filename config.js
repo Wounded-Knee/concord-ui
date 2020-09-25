@@ -2,7 +2,7 @@ const config = {
 	height: 200,
 	width: 10000,
 	visibleWidth: 800,
-	nsPxFactor: 20000,
+	nsPxFactor: 30000,
 	websocketUrl: "ws://localhost:8080/",
 	colors: [
 	  [

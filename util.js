@@ -7,6 +7,8 @@ const hrtimeToBigint = hrtime => {
 	return hrtime[0] * 1000000 + hrtime[1] / 1000;
 };
 
+const nsToSec = (ns) => ns / 1000000000;
+
 const nsToPx = (ns) => ns / nsPxFactor;
 
 const pxToNs = (px) => px * nsPxFactor;
@@ -17,5 +19,6 @@ export {
 	hrtimeToBigint,
 	getHexColor,
 	nsToPx,
-	pxToNs
+	pxToNs,
+	nsToSec
 };
