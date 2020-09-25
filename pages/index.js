@@ -41,20 +41,28 @@ export default class Dev extends React.Component {
     if (typeof(firstTime) === 'undefined') firstTime = newChunk.chunkTime;
     latestTime = newChunk.chunkTime;
 
-    this.setState((state) => ({
-      streams: {
-        ...state.streams,
-        [user]: [
-          ...state.streams[user] || [],
-          newChunk
-        ]
-      },
-      users: {
-        ...state.users,
-        [user]: newChunk.user
-      },
-      chunkCount: chunkCount
-    }));
+    this.setState((state) => {
+      const userStream = state.streams[user]
+        ? (state.streams[user].length > 1000)
+          ? state.streams[user].slice(500)
+          : state.streams[user]
+        : [];
+
+      return {
+        streams: {
+          ...state.streams,
+          [user]: [
+            ...userStream,
+            newChunk
+          ]
+        },
+        users: {
+          ...state.users,
+          [user]: newChunk.user
+        },
+        chunkCount: chunkCount
+      };
+    });
   }
 
   tick() {
@@ -122,6 +130,10 @@ export default class Dev extends React.Component {
       profile
     } = this.state;
     const streams = this.getStreams();
+    const chunksInMemory = streams.reduce(
+      (acc, stream) => acc + stream.length,
+      0
+    );
     const sync = hrtimeToBigint(latestTime) - (
         typeof(firstTime) === 'undefined' ? 0 : hrtimeToBigint(firstTime)
       ) - pxToNs(visibleWidth*1.8);
@@ -148,7 +160,7 @@ export default class Dev extends React.Component {
         <p>Sync: { sync }</p>
         <p>Avg Svr Proctime: { profile ? nsToSec(profile.avg) : '?' }</p>
         <p>Streams: { streams.length }</p>
-        <p>Chunks: { chunkCount }</p>
+        <p>Chunks: { chunkCount } ({ chunksInMemory } in memory)</p>
         <p>Errors: { errors.length }</p>
         <p>Messages: { messages.length }</p>
         <p>Frames: { frames.length } total, { frames.filter(frame => frame.data.disruptive).length } disruptive</p>
