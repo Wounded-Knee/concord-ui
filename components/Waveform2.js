@@ -52,7 +52,7 @@ export default class Waveform extends React.Component {
 	drawChunk(chunk) {
 		const { ctx } = this;
 		const { height, width } = ctx.canvas;
-		const col = nsToPx(hrtimeToBigint(chunk.chunkTime)) - firstCol;
+		const col = (nsToPx(hrtimeToBigint(chunk.chunkTime)) / window.devicePixelRatio) - firstCol;
 		if (firstCol === 0) firstCol = col;
 		const sample = chunk ? (chunk.delightfulness - 50) * 5 : 10;
 		const margin = parseInt((height - sample) / 2);

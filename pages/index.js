@@ -4,11 +4,13 @@ import Scroller from '../components/Scroller';
 import WaveformManager from '../components/WaveformManager';
 import Websocket from 'react-websocket';
 import config from '../config';
-import { getHexColor } from '../util';
+import { getHexColor, hrtimeToBigint, pxToNs } from '../util';
 const { websocketUrl, height, width, visibleWidth, colors } = config;
 const fakeUsers = [1,2,3];
 var chunkCount = 0;
 const timers = [];
+var latestTime = [];
+var firstTime = undefined;
 
 export default class Dev extends React.Component {
   constructor(props) {
@@ -36,6 +38,8 @@ export default class Dev extends React.Component {
     const user = newChunk.user.id;
     const userStream = this.state.streams[user] || [];
     chunkCount++;
+    if (typeof(firstTime) === 'undefined') firstTime = newChunk.chunkTime;
+    latestTime = newChunk.chunkTime;
 
     this.setState((state) => ({
       streams: {
@@ -112,10 +116,13 @@ export default class Dev extends React.Component {
       users
     } = this.state;
     const streams = this.getStreams();
+    const sync = hrtimeToBigint(latestTime) - (
+        typeof(firstTime) === 'undefined' ? 0 : hrtimeToBigint(firstTime)
+      ) - pxToNs(visibleWidth*1.8);
 
     return (
       <>
-        <Scroller height={ height } width={ visibleWidth } secs={ secs }>
+        <Scroller height={ height } width={ visibleWidth } secs={ secs } sync={ sync }>
           <WaveformManager
             streams={ streams }
             height={ height }
@@ -132,6 +139,7 @@ export default class Dev extends React.Component {
         }) }
 
         <p>Secs: { secs }</p>
+        <p>Sync: { sync }</p>
         <p>Streams: { streams.length }</p>
         <p>Chunks: { chunkCount }</p>
         <p>Errors: { errors.length }</p>
